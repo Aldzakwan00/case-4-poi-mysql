@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>Quick Start - Leaflet</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    
+    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        #mapid {
+            height: 600px;
+            width: 900px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="text-center mt-5">Aplikasi Berbasis Digital Maps</h1>
+
+    <div class="d-flex justify-content-center mt-5">
+        <div id="mapid"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var mymap = L.map('mapid').setView([-7.942965, 112.953186], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+            }).addTo(mymap);
+
+            // Read
+            // Fetch data markers dari database dan menambahkan marker ke peta
+            fetch('read.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+     
+                    for (var i = 0; i < data.length; i++) {
+                        var location = new L.LatLng(data[i]['Koordinat_Latitude'], data[i]['Koordinat_Longitude']);
+                        var marker = L.marker([data[i]['Koordinat_Latitude'], data[i]['Koordinat_Longitude']], { draggable: true }).addTo(mymap);
+                        marker.bindPopup("<b>Latitude:</b>" + data[i]['Koordinat_Latitude'] + 
+                        "<br><b>Longitude: </b>" + data[i]['Koordinat_Longitude'] +
+                        "<br><b>Nama Lokasi: </b>" + data[i]['Nama_Lokasi'] +
+                        "<br><b>Deskripsi: </b>" + data[i]['Deskripsi_Lokasi'] +
+                        "<br><b>Rating: </b>" + data[i]['Rating'] +
+                        "<br><b>Kategori: </b>" + data[i]['Kategori'] +
+                        "<br><b>Waktu Buka: </b>" + data[i]['Waktu_Buka'] +
+                        "<br><b>Kontak: </b>" + data[i]['Kontak_Lokasi']).openPopup();
+
+                    }
+
+
+                }
+            })
+            .catch(error => console.error(error));
+
+            // Create
+            // Membuat form untuk menambah marker baru ketika peta diklik
+            mymap.on('click', function(e){
+                var latlng = e.latlng;
+                var popupContent = `
+                    <h2>Tambah POI Baru</h2>
+                    <form method="POST" action="save_poi.php">
+                        <div>
+                            <label for="latitude">Latitude:</label>
+                            <input type="text" id="latitude" name="latitude" value="${latlng.lat}" readonly>
+                        </div>
+                        <div>
+                            <label for="longitude">Longitude:</label>
+                            <input type="text" id="longitude" name="longitude" value="${latlng.lng}" readonly>
+                        </div>
+                        <div>
+                            <label for="nama_lokasi">Nama Lokasi:</label>
+                            <input type="text" id="nama_lokasi" name="nama_lokasi" required>
+                        </div>
+                        <div>
+                            <label for="deskripsi_lokasi">Deskripsi Lokasi:</label>
+                            <textarea id="deskripsi_lokasi" name="deskripsi_lokasi" required></textarea>
+                        </div>
+                        <div>
+                            <label for="rating">Rating:</label>
+                            <input type="number" id="rating" name="rating" required>
+                        </div>
+                        <div>
+                            <label for="kategori">Kategori:</label>
+                            <input type="text" id="kategori" name="kategori" required>
+                        </div>
+                        <div>
+                            <label for="waktu_buka">Waktu Buka:</label>
+                            <input type="time" id="waktu_buka" name="waktu_buka" required>
+                        </div>
+                        <div>
+                            <label for="kontak_lokasi">Kontak Lokasi:</label>
+                            <input type="text" id="kontak_lokasi" name="kontak_lokasi" required>
+                        </div>
+                        <button type="submit">Simpan</button>
+                    </form>
+                `;
+
+                L.popup()
+                    .setLatLng(latlng)
+                    .setContent(popupContent)
+                    .openOn(mymap);
+            });
+            
+            $(document).on('submit', '#poiForm', function(e){
+                e.preventDefault();
+                var formData = new FormData(this);
+                fetch('save_poi.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+
+            
+            mymap.on('popupopen', function(e) {
+                var marker = e.popup._source;
+
+                if (marker) {
+                    var originalLatLng = marker.getLatLng(); 
+
+                    // Update
+                    marker.on('dragend', function(e) {
+                        var latlng = e.target.getLatLng(); 
+                        var popupContent = `
+                        <h2>Update POI</h2>
+                        <form id="form-update" style="width: 300px;">
+                            <div class="mb-3">
+                                <label for="latitude" class="form-label fs-7">Latitude</label>
+                                <input type="text" class="form-control form-control-sm fs-7" id="latitude" value="${latlng.lat}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="longitude" class="form-label fs-7">Longitude</label>
+                                <input type="text" class="form-control form-control-sm fs-7" id="longitude" value="${latlng.lng}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nama_lokasi" class="form-label fs-7">Nama Lokasi</label>
+                                <input type="text" class="form-control form-control-sm fs-7" id="nama_lokasi" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="deskripsi_lokasi" class="form-label fs-7">Deskripsi Lokasi</label>
+                                <textarea class="form-control form-control-sm fs-7" id="deskripsi_lokasi" rows="2" required></textarea>
+                            </div>
+                            <div class="row mb-3 g-3">
+                                <div class="col">
+                                    <label for="rating" class="form-label fs-7">Rating</label>
+                                    <input type="number" class="form-control form-control-sm fs-7" id="rating" required>
+                                </div>
+                                <div class="col">
+                                    <label for="kategori" class="form-label fs-7">Kategori</label>
+                                    <input type="text" class="form-control form-control-sm fs-7" id="kategori" required>
+                                </div>
+                            </div>
+                            <div class="row mb-3 g-3">
+                                <div class="col">
+                                    <label for="waktu_buka" class="form-label fs-7">Waktu Buka</label>
+                                    <input type="time" class="form-control form-control-sm fs-7" id="waktu_buka" required>
+                                </div>
+                                <div class="col">
+                                    <label for="kontak_lokasi" class="form-label fs-7">Kontak Lokasi</label>
+                                    <input type="text" class="form-control form-control-sm fs-7" id="kontak_lokasi" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Simpan</button>
+                        </form>
+                        `;
+
+                        L.popup()
+                        .setLatLng(latlng)
+                        .setContent(popupContent)
+                        .openOn(mymap);
+
+                        document.getElementById('form-update').addEventListener('submit', function(event) {
+                            event.preventDefault(); 
+
+                            var namaLokasi = document.getElementById('nama_lokasi').value;
+                            var deskripsi = document.getElementById('deskripsi_lokasi').value;
+                            var rating = document.getElementById('rating').value;
+                            var kategori = document.getElementById('kategori').value;
+                            var waktuBuka = document.getElementById('waktu_buka').value;
+                            var kontak = document.getElementById('kontak_lokasi').value;
+
+                            var formData = new FormData();
+                            formData.append('original_latitude', originalLatLng.lat);
+                            formData.append('original_longitude', originalLatLng.lng);
+                            formData.append('new_latitude', latlng.lat);
+                            formData.append('new_longitude', latlng.lng);
+                            formData.append('nama_lokasi', namaLokasi);
+                            formData.append('deskripsi_lokasi', deskripsi);
+                            formData.append('rating', rating);
+                            formData.append('kategori', kategori);
+                            formData.append('waktu_buka', waktuBuka);
+                            formData.append('kontak_lokasi', kontak);
+
+                            console.log("FormData:", formData); 
+
+                            fetch('update.php', {
+                                method: 'POST',
+                                body: formData
+                            }).then(response => {
+                                console.log('Data berhasil diupdate');
+                                window.location.reload();
+                            });
+                        });
+
+
+                    });
+
+                        //DELETE
+                        marker.on('contextmenu', function(e) {
+                            var popupContent = `
+                                <h2>Hapus POI</h2>
+                                <p>Apakah Anda yakin ingin menghapus lokasi ini?</p>
+                                <button id="hapusButton" class="btn btn-danger">Hapus</button>
+                            `;
+
+                            // Menampilkan pop-up konfirmasi penghapusan
+                            L.popup()
+                                .setLatLng(marker.getLatLng())
+                                .setContent(popupContent)
+                                .openOn(mymap);
+
+                            // Tambahkan event listener untuk tombol hapus
+                            document.getElementById('hapusButton').addEventListener('click', function() {
+                                // Menghapus marker dari peta
+                                mymap.removeLayer(marker);
+
+                                // Mengirim permintaan HTTP untuk menghapus data dari database
+                                var formData = new FormData();
+                                formData.append('original_latitude', originalLatLng.lat);
+                                formData.append('original_longitude', originalLatLng.lng);
+
+                                fetch('delete.php', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(response => response.text())
+                                .then(data => {
+                                    console.log('Data berhasil dihapus');
+                                    window.location.reload();
+                                })
+                                .catch(error => {
+                                    console.error('Error:', error);
+                                });
+                            });
+                        });
+
+                }
+            });
+
+
+        });
+
+
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
