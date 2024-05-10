@@ -7,7 +7,7 @@ if (
     $original_latitude = $_POST['original_latitude'];
     $original_longitude = $_POST['original_longitude'];
 
-    $update_query = "DELETE FROM Informasi
+    $update_query = "DELETE FROM POI
                         WHERE 
                         Koordinat_Latitude = '$original_latitude' AND Koordinat_Longitude = '$original_longitude'";
 
