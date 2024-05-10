@@ -19,7 +19,7 @@ if (
     $waktu_buka = $_POST['waktu_buka'];
     $kontak = $_POST['kontak_lokasi'];
 
-    $update_query = "UPDATE Informasi SET 
+    $update_query = "UPDATE POI SET 
         Nama_Lokasi = '$nama_lokasi', 
         Koordinat_Latitude = $new_latitude, 
         Koordinat_Longitude = $new_longitude, 
