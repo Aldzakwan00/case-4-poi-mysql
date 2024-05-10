@@ -1,7 +1,7 @@
 <?php
 include 'koneksi.php';
 
-$sql = "SELECT * FROM informasi";
+$sql = "SELECT * FROM POI";
 $result = $conn->query($sql);
 
 $data = array();
